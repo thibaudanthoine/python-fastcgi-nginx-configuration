@@ -1,0 +1,27 @@
+
+# include upstream { .. } blocks
+include /etc/nginx/conf.d/wsgisample/*.conf;
+
+server {
+    listen          80;
+    server_name     gw.wsgi-sample.dev;
+
+    access_log      /var/log/nginx/gw.wsgi-sample.dev.access.log;
+    error_log       /var/log/nginx/gw.wsgi-sample.dev.error.log;
+
+    chunkin on;
+    error_page 411 = @my_error;
+    location @my_error {
+        chunkin_resume;
+    }
+
+    if ($request_uri ~ "^/([a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+)/?" ) {
+        set $fastcgiupstream "$1$2";
+        break;
+    }
+
+    location ~ {
+        include fastcgi_params;
+        fastcgi_pass   $fastcgiupstream;
+    }
+}

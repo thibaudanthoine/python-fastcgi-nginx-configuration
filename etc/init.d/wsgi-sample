@@ -1,0 +1,115 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:             wsgi-sample
+# Required-Start: 	    $local_fs $syslog
+# Required-Stop: 	    $local_fs $syslog
+# Default-Start: 	    2 3 4 5
+# Default-Stop: 	    0 1 6
+# X-Interactive:        true
+# Short-Description:    Start/Stop fastCGI instances.
+# Description:          Starts/stops multiple fastCGI instances at once.
+### END INIT INFO
+
+. /lib/lsb/init-functions
+
+# instances to start:
+FCGI_INSTANCES="1 2"
+
+MODULENAME="wsgisample"
+
+BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PID_BASEDIR="/var/run"
+
+# FCGI_BIN="$BASEDIR/../../fcgi/wsgi-sample.fcgi"
+FCGI_BIN="/home/eurovox/projects/python-wsgi/fcgi/wsgi-sample.fcgi"
+FCGI_GROUP="www-data"
+
+RETVAL=0
+
+##
+## $1 instance_number to start
+##
+start_instance() {
+    echo -n " Starting $MODULENAME $1: "
+    cur_pid_file="$PID_BASEDIR/$MODULENAME/daemon-$1.pid"
+
+    if [ -f $cur_pid_file ] ; then
+        echo "Already running"
+        return 0
+    fi
+
+    echo `basename $FCGI_BIN`
+    exec 2>&1
+    start-stop-daemon --start --background --group $FCGI_GROUP --pidfile $cur_pid_file --make-pidfile --exec $FCGI_BIN -- --instance $1
+    return $?
+}
+
+start() {
+    if [ ! -x $FCGI_BIN ] ; then
+        echo "FCGI is not executable: "$FCGI_BIN
+        exit 1
+    fi
+
+    for cur_instance in $FCGI_INSTANCES
+    do
+        start_instance $cur_instance
+    done
+}
+
+##
+## $1 instance_number to stop
+##
+stop_instance() {
+    echo -n " Stopping $MODULENAME $1: "
+    cur_pid_file="$PID_BASEDIR/$MODULENAME/daemon-$1.pid"
+
+    if [ ! -f $cur_pid_file ] ; then
+        echo "Not running"
+        return 0
+    fi
+
+    echo `basename $FCGI_BIN`
+    start-stop-daemon --stop --quiet --pidfile $cur_pid_file
+    RETVAL=$?
+    if [ -f $cur_pid_file ] ; then
+        kill `cat $cur_pid_file` && rm $cur_pid_file
+    fi
+}
+
+stop() {
+    for cur_instance in $FCGI_INSTANCES
+    do
+        stop_instance $cur_instance
+    done
+}
+
+dozap() {
+    for cur_instance in $FCGI_INSTANCES
+    do
+        cur_pid_file="$PID_BASEDIR/$MODULENAME/daemon-"$cur_instance".pid"
+        if [ -f $cur_pid_file ] ; then
+            rm $cur_pid_file
+        fi
+    done
+}
+
+case "$1" in
+    start)
+      start
+  ;;
+    stop)
+      stop
+  ;;
+    restart)
+      stop
+      start
+  ;;
+    zap)
+      dozap
+  ;;
+    *)
+      echo "Usage: wsgi-sample {start|stop|restart}"
+      exit 1
+  ;;
+esac
+exit $RETVAL
