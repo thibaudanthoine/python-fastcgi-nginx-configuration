@@ -5,7 +5,7 @@ A Python FastCGI script with Nginx configuration.
 
 This script is based on WSGI specification (Web Server Gateway Interface) for interfacing Web servers and Python Web frameworks/applications.
 
-Using simplest configuration for load balancing with nginx (``upstream`` instruction).
+Using a smartest configuration for load balancing with Nginx (``upstream`` instruction).
 
 ### Installation
 
